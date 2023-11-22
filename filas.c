@@ -6,7 +6,7 @@
 
 #define TAM 10
 
-Processo *novoProc(void)
+Processo *novoProc(int t)
 {
 	static int NPID = 0;
 	Processo *novo;
@@ -14,6 +14,13 @@ Processo *novoProc(void)
 	novo = malloc(sizeof(*novo));
 	MEMCHECK(novo);
 	novo->PID = NPID++;
+	novo->PPID = novo->PID;
+	novo->prioridade = 0;
+
+	novo->tempoTotal = rand() % 15;
+	novo->tempoTotal++;
+
+	novo->tempoInicio = t;
 
 	return novo;
 }
@@ -78,21 +85,42 @@ int vazia(FilaProcs *fila)
 	return 0;
 }
 
-void removerPrimeiro(FilaProcs *fila)
+Processo *removerPrimeiro(FilaProcs *fila)
 {
+	Processo *antigo;
+
 	if(vazia(fila)) {
 		fprintf(stderr, "ERRO: Tentando remover de fila de processos vazia\n");
 		exit(2);
 	}
 
+	antigo = fila->vetor[fila->inicio];
 	fila->inicio++;
 	fila->inicio %= fila->tam;
 
 	if (fila->fim == fila->inicio) {
 		fila->inicio = -1;
 		fila->fim = -1;
+	}
+
+	return antigo;
+}
+
+void printFila(FilaProcs *fila)
+{
+	int i;
+	int nElem;
+
+	if (fila->inicio == -1) {
+		puts("");
 		return;
 	}
 
-	return;
+	nElem = fila->fim - fila->inicio;
+	if (nElem <= 0)
+		nElem += fila->tam;
+
+	for (i = 0; i < nElem; i++)
+		printf("%d ", fila->vetor[(fila->inicio + i) % fila->tam]->PID);
+	puts("");
 }
