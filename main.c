@@ -146,17 +146,22 @@ void trocaProcesso(Processo **atual, FilaProcs **filas)
 void executa(Processo **executando, int t, FilaProcs **ios)
 {
 	Processo *proc = *executando;
+	static char *nomesIOS[3] = {"disco", "impressora", "fita magnetica"};
+	int tipoIO;
+
 	if(proc != NULL) {
 		(*executando)->tempoExec++;
 		if (proc->tempoExec == proc->tempoTotal) {
-			printf("Processo de PID %d terminou com turnaround de %d unidades de tempo\n", proc->PID, t - proc->tempoInicio);
+			printf("\nProcesso de PID %d terminou com turnaround de %d unidades de tempo\n", proc->PID, t - proc->tempoInicio);
 			free(*executando);
 			*executando = NULL;
 			return;
 		}
 		if (!(rand() % proc->chanceIO)) {
 			*executando = NULL;
-			inserir(proc, ios[rand() % 3]); /* Tipo de IO aleatório */
+			tipoIO = rand() % 3;
+			printf("\nProcesso de PID %d solicitou IO do tipo %s e foi para a fila correspondente\n", proc->PID, nomesIOS[tipoIO]);
+			inserir(proc, ios[tipoIO]); /* Tipo de IO aleatório */
 			return;
 		}
 	}
