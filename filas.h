@@ -1,14 +1,6 @@
 #ifndef FILAS_H
 #define FILAS_H
-typedef struct {
-	int PID;
-	int PPID;
-	int prioridade;
-	int tempoInicio;
-	int tempoExec;
-	int tempoTotal;
-	/**TODO**/
-} Processo;
+#include "procs.h"
 
 typedef struct {
 	Processo **vetor;
@@ -17,9 +9,7 @@ typedef struct {
 	int fim;
 } FilaProcs;
 
-Processo *novoProc(int); /* Dependendo de como a struct ficar, vai precisar de um apagarProc() */
-FilaProcs *novaFila(void); /* Mesma coisa */
-
+FilaProcs *novaFila(void);
 void inserir(Processo *, FilaProcs *);
 void overflowFila(FilaProcs *);
 int vazia(FilaProcs *);

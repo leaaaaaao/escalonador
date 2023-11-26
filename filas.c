@@ -1,29 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "filas.h"
+#include "procs.h"
 
 #define MEMCHECK(X) if((X) == NULL) {fprintf(stderr, "ERRO: Sem memoria\n"); exit(1);}
 
 #define TAM 10
-
-Processo *novoProc(int t)
-{
-	static int NPID = 0;
-	Processo *novo;
-
-	novo = malloc(sizeof(*novo));
-	MEMCHECK(novo);
-	novo->PID = NPID++;
-	novo->PPID = novo->PID;
-	novo->prioridade = 0;
-
-	novo->tempoTotal = rand() % 15;
-	novo->tempoTotal++;
-
-	novo->tempoInicio = t;
-
-	return novo;
-}
 
 FilaProcs *novaFila(void)
 {

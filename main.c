@@ -1,17 +1,27 @@
 #include<stdio.h>
 #include<stdlib.h>
 #include<time.h>
+
 #ifdef __linux__
 #include <unistd.h>
+void clear(void) {
+	system("clear");
+}
 #endif
+
 #ifdef _WIN32
 #include <windows.h>
+void clear(void) {
+	system("cls");
+}
 #endif
 
 #include "filas.h"
+#include "procs.h"
 
-#define NIVEISP 3
+#define NIVEISP 2
 #define QUANTUM 3
+#define CHANCE 4
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
 enum {DISCO, IMPRESSORA, FITAMAG};
@@ -21,7 +31,7 @@ void showStatus(int t, Processo *atual, FilaProcs **prioridades, FilaProcs **ios
 	int n;
 
 	n = 0;
-	system("clear");
+	clear();
 	printf("Tempo: %d\n", t);
 	if (atual == NULL)
 		puts("Nenhum processo sendo executado agora");
@@ -71,24 +81,21 @@ int main(void)
 	FilaProcs *IO[4];
 
 	Processo *atual = NULL;
-	Processo *tmp;
 	
 	srand(time(NULL));
 	for (i = 0; i < NIVEISP; i++)
 		Q[i] = novaFila();
+	for (i = 0; i < 3; i++)
+		IO[i] = novaFila();
 	Q[NIVEISP] = NULL;
 	IO[3] = NULL;
 
 	tempo = 0;
+	nProc = 0;
 	while(1) {
-		if (tempo % 2 && !(rand() % 3))  {
-			tmp = novoProc(tempo);
-			nProc = tmp->PID;
-			if (nProc == 40) {
-				puts("Processo 40 chegou, encerrando");
-				break;
-			}
-			inserir(tmp, Q[0]);
+		if (!(rand() % CHANCE) && nProc < 10)  {
+			inserir(novoProc(tempo), Q[0]);
+			nProc++;
 		}
 
 		if(timeSlice == QUANTUM || atual == NULL) {
@@ -98,12 +105,12 @@ int main(void)
 
 		showStatus(tempo, atual, Q, IO);	
 		if(atual != NULL) {
-			atual->tempoExec++;
 			if (atual->tempoExec == atual->tempoTotal) {
 				printf("Processo de PID %d terminou com turnaround de %d unidades de tempo\n", atual->PID, tempo - atual->tempoInicio);
 				free(atual);
 				atual = NULL;
 			}
+			atual->tempoExec++;
 		}
 		tempo++;
 		timeSlice++;
