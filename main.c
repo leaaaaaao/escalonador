@@ -14,6 +14,8 @@ void clear(void) {
 void clear(void) {
 	system("cls");
 }
+
+#define sleep(X) Sleep(X)
 #endif
 
 #include "filas.h"
@@ -21,23 +23,29 @@ void clear(void) {
 
 #define NIVEISP 2
 #define QUANTUM 3
-#define CHANCE 4
+#define CHANCENOVO 4
+#define MAXPROC 10
+#define TICK 1
+
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
 enum {DISCO, IMPRESSORA, FITAMAG};
 
 void showStatus(int, Processo *, FilaProcs **, FilaProcs **);
 void trocaProcesso(Processo **, FilaProcs **);
-void executa(Processo **, int);
+void executa(Processo **, int, FilaProcs **);
+void rodaIO(FilaProcs **, FilaProcs **);
+int acabou(FilaProcs **, FilaProcs **);
 
 int main(void)
 {
 	int i;
 	int tempo;
-	int timeSlice = 0;
+	int utGastas = 0;
 	int nProc;
 	FilaProcs *Q[NIVEISP + 1];
 	FilaProcs *IO[4];
+	FilaProcs **iterador;
 
 	Processo *atual = NULL;
 	
@@ -52,22 +60,29 @@ int main(void)
 	tempo = 0;
 	nProc = 0;
 	while(1) {
-		if (!(rand() % CHANCE) && nProc < 10)  {
+		if (nProc == MAXPROC && acabou(Q, IO)) {
+			puts("Encerrando...");
+			return 0;
+		}
+
+		if (!(rand() % CHANCENOVO) && nProc < MAXPROC)  {
 			inserir(novoProc(tempo), Q[0]);
 			nProc++;
 		}
 
-		if(timeSlice == QUANTUM || atual == NULL) {
+		rodaIO(IO, Q);
+
+		if(utGastas == QUANTUM || atual == NULL) {
 			trocaProcesso(&atual, Q);
-			timeSlice = 0;
+			utGastas = 0;
 		}
 
 		showStatus(tempo, atual, Q, IO);
-		executa(&atual, tempo);
-		
+		executa(&atual, tempo, IO);
+
 		tempo++;
-		timeSlice++;
-		sleep(1);
+		utGastas++;
+		sleep(TICK);
 	}
 
 
@@ -76,6 +91,7 @@ int main(void)
 
 void showStatus(int t, Processo *atual, FilaProcs **prioridades, FilaProcs **ios)
 {
+	static char *nomesIOS[3] = {"disco", "impressora", "fita magnetica"};
 	int n;
 
 	n = 0;
@@ -94,6 +110,14 @@ void showStatus(int t, Processo *atual, FilaProcs **prioridades, FilaProcs **ios
 	}
 	puts("");
 	
+	n = 0;
+	while (*ios != NULL) {
+		printf("Fila do IO de tipo %s: ", nomesIOS[n]);
+		printFila(*ios);
+		n++;
+		ios++;
+	}
+
 	return;
 }
 
@@ -119,17 +143,53 @@ void trocaProcesso(Processo **atual, FilaProcs **filas)
 	return;
 }
 
-void executa(Processo **executando, int t)
+void executa(Processo **executando, int t, FilaProcs **ios)
 {
 	Processo *proc = *executando;
 	if(proc != NULL) {
+		(*executando)->tempoExec++;
 		if (proc->tempoExec == proc->tempoTotal) {
 			printf("Processo de PID %d terminou com turnaround de %d unidades de tempo\n", proc->PID, t - proc->tempoInicio);
 			free(*executando);
 			*executando = NULL;
 			return;
 		}
-		
-		(*executando)->tempoExec++;
+		if (!(rand() % proc->chanceIO)) {
+			*executando = NULL;
+			inserir(proc, ios[rand() % 3]); /* Tipo de IO aleatório */
+			return;
+		}
 	}
+}
+
+void rodaIO(FilaProcs **ios, FilaProcs **prioridades)
+{
+	int tempo[3] = {3, 5, 7}; /* Tempo para esse tipo de IO acabar */
+	static int tempoRestante[3] = {3, 5, 7};
+	int i;
+
+	for (i = 0; i < 3; i++) {
+		if(!vazia(ios[i]) && --tempoRestante[i] == 0){
+			inserir(removerPrimeiro(ios[i]), prioridades[(i == DISCO) ? 1 : 0]);
+			tempoRestante[i] = tempo[i];
+		}
+	}
+
+	return;
+}
+
+int acabou(FilaProcs **p, FilaProcs **io)
+{
+	int rodando = 0;
+	while (*p != NULL) {
+		if (!vazia(*p))
+			rodando = 1;
+		p++;
+	}
+	while (*io != NULL) {
+		if (!vazia(*io))
+			rodando = 1;
+		io++;
+	}
+	return !rodando;
 }

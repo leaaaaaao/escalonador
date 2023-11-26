@@ -15,8 +15,9 @@ Processo *novoProc(int t)
 	novo->tempoTotal = rand() % 15;
 	novo->tempoTotal++;
     novo->tempoExec = 0;
-
 	novo->tempoInicio = t;
+
+	novo->chanceIO = 2 + (rand() % 10);
 
 	return novo;
 }

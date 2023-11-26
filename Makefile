@@ -2,7 +2,7 @@ FLAGS = -ansi -pedantic -Wall
 
 escalonador: obj/main.o obj/filas.o obj/procs.o
 	@echo "Compilando..."
-	gcc -o escalonador main.c filas.c procs.c $(FLAGS)
+	gcc -o escalonador obj/main.o obj/filas.o obj/procs.o $(FLAGS)
 	@echo "Feito"	
 
 obj/main.o: main.c

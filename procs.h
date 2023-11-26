@@ -11,7 +11,7 @@ typedef struct {
 	int tempoInicio;
 	int tempoExec;
 	int tempoTotal;
-	/**TODO**/
+	int chanceIO;
 } Processo;
 
 Processo *novoProc(int); 
