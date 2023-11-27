@@ -15,7 +15,7 @@ void clear(void) {
 	system("cls");
 }
 
-#define sleep(X) Sleep(X)
+#define sleep(X) Sleep(X * 1000)
 #endif
 
 #include "filas.h"
