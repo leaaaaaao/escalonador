@@ -60,7 +60,7 @@ int main(void)
 	tempo = 0;
 	nProc = 0;
 	while(1) {
-		if (nProc == MAXPROC && acabou(Q, IO)) {
+		if (atual == NULL && nProc == MAXPROC && acabou(Q, IO)) {
 			puts("Encerrando...");
 			return 0;
 		}
