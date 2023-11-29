@@ -35,15 +35,15 @@ enum {DISCO, IMPRESSORA, FITAMAG};
 void showStatus(int, Processo *, FilaProcs **, FilaProcs **, Log *);
 void trocaProcesso(Processo **, FilaProcs **);
 void executa(Processo **, int, FilaProcs **, Registro *, Log *);
-void rodaIO(FilaProcs **, FilaProcs **);
-int acabou(FilaProcs **, FilaProcs **);
+void rodaIO(FilaProcs **, FilaProcs **); /* Atualiza os tempos restantes de IO e suas respectivas filas */
+int acabou(FilaProcs **, FilaProcs **); /* Verifica se as filas estão todas vazias*/
 
 int main(void)
 {
 	int i;
-	int tempo;
-	int utGastas = 0;
-	int nProc;
+	int tempo;			/* Usado como relogio */
+	int utGastas = 0;	/* Unidades de tempo que o processo atualmente em execução já gastou do quantum */
+	int nProc;			/* Número de processos já criados */
 
 	Log logs;
 	initLog(&logs);
@@ -90,10 +90,10 @@ int main(void)
 		}
 
 		showStatus(tempo, atual, Q, IO, &logs);
-		executa(&atual, tempo, IO, historico, &logs);
-
 		tempo++;
 		utGastas++;
+		executa(&atual, tempo, IO, historico, &logs);
+
 		sleep(TICK);
 	}
 	
