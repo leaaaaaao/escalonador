@@ -21,19 +21,20 @@ void clear(void) {
 #include "filas.h"
 #include "procs.h"
 
-#define NIVEISP 2
-#define QUANTUM 3
-#define CHANCENOVO 4
-#define MAXPROC 10
-#define TICK 1
+#define NIVEISP 2 		/* Número de filas de prioridade */
+#define TICK 1    		/* Duração em segundos de uma unidade de tempo*/
+#define QUANTUM 3 		/* Quantum em unidades de tempo (ticks) */
+#define CHANCENOVO 4	/* Chance de um processo novo surgir a cada u.t. */
+#define MAXPROC 10		/* Número total de processos que vão aparecer do início ao fim do programa */
+#define TEMPOLOG 5		/* Número de 'u.t.'s que os logs ṕermanecem na tela. */
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 
 enum {DISCO, IMPRESSORA, FITAMAG};
 
-void showStatus(int, Processo *, FilaProcs **, FilaProcs **);
+void showStatus(int, Processo *, FilaProcs **, FilaProcs **, Log *);
 void trocaProcesso(Processo **, FilaProcs **);
-void executa(Processo **, int, FilaProcs **);
+void executa(Processo **, int, FilaProcs **, Registro *, Log *);
 void rodaIO(FilaProcs **, FilaProcs **);
 int acabou(FilaProcs **, FilaProcs **);
 
@@ -43,11 +44,16 @@ int main(void)
 	int tempo;
 	int utGastas = 0;
 	int nProc;
+
+	Log logs;
+	initLog(&logs);
+
 	FilaProcs *Q[NIVEISP + 1];
 	FilaProcs *IO[4];
-	FilaProcs **iterador;
+	Registro historico[MAXPROC];
 
 	Processo *atual = NULL;
+	Processo *tmp = NULL;
 	
 	srand(time(NULL));
 	for (i = 0; i < NIVEISP; i++)
@@ -57,16 +63,22 @@ int main(void)
 	Q[NIVEISP] = NULL;
 	IO[3] = NULL;
 
+	for (i = 0; i < MAXPROC; i++)
+		historico[i].nIOs = 0;
+
 	tempo = 0;
 	nProc = 0;
 	while(1) {
 		if (atual == NULL && nProc == MAXPROC && acabou(Q, IO)) {
 			puts("Encerrando...");
-			return 0;
+			break;
 		}
 
 		if (!(rand() % CHANCENOVO) && nProc < MAXPROC)  {
-			inserir(novoProc(tempo), Q[0]);
+			tmp = novoProc(tempo);
+			historico[tmp->PID].chegada = tempo;
+			historico[tmp->PID].PID = tmp->PID;
+			inserir(tmp, Q[0]);
 			nProc++;
 		}
 
@@ -77,19 +89,21 @@ int main(void)
 			utGastas = 0;
 		}
 
-		showStatus(tempo, atual, Q, IO);
-		executa(&atual, tempo, IO);
+		showStatus(tempo, atual, Q, IO, &logs);
+		executa(&atual, tempo, IO, historico, &logs);
 
 		tempo++;
 		utGastas++;
 		sleep(TICK);
 	}
+	
 
+	printRegistros(historico, MAXPROC);
 
 	return 0;
 }
 
-void showStatus(int t, Processo *atual, FilaProcs **prioridades, FilaProcs **ios)
+void showStatus(int t, Processo *atual, FilaProcs **prioridades, FilaProcs **ios, Log *logs)
 {
 	static char *nomesIOS[3] = {"disco", "impressora", "fita magnetica"};
 	int n;
@@ -118,6 +132,14 @@ void showStatus(int t, Processo *atual, FilaProcs **prioridades, FilaProcs **ios
 		ios++;
 	}
 
+	for(n = logs->inicio; n < logs->fim; n++) {
+		if(t - logs->chegada[n] > TEMPOLOG) {
+			logs->inicio = (logs->inicio + 1) % MAXLOGS;
+			continue;
+		}
+		printf("%s", logs->textos[n]);
+	}
+
 	return;
 }
 
@@ -143,7 +165,7 @@ void trocaProcesso(Processo **atual, FilaProcs **filas)
 	return;
 }
 
-void executa(Processo **executando, int t, FilaProcs **ios)
+void executa(Processo **executando, int t, FilaProcs **ios, Registro *hist, Log *logs)
 {
 	Processo *proc = *executando;
 	static char *nomesIOS[3] = {"disco", "impressora", "fita magnetica"};
@@ -152,7 +174,13 @@ void executa(Processo **executando, int t, FilaProcs **ios)
 	if(proc != NULL) {
 		(*executando)->tempoExec++;
 		if (proc->tempoExec == proc->tempoTotal) {
-			printf("\nProcesso de PID %d terminou com turnaround de %d unidades de tempo\n", proc->PID, t - proc->tempoInicio);
+			hist[proc->PID].saida = t;
+			hist[proc->PID].turnaround = t - proc->tempoInicio;
+
+			sprintf(logs->textos[logs->fim], "\nProcesso de PID %d terminou com turnaround de %d unidades de tempo\n", proc->PID, hist[proc->PID].turnaround);
+			logs->chegada[logs->fim++] = t;
+			logs->fim %= MAXLOGS;
+
 			free(*executando);
 			*executando = NULL;
 			return;
@@ -160,7 +188,13 @@ void executa(Processo **executando, int t, FilaProcs **ios)
 		if (!(rand() % proc->chanceIO)) {
 			*executando = NULL;
 			tipoIO = rand() % 3;
-			printf("\nProcesso de PID %d solicitou IO do tipo %s e foi para a fila correspondente\n", proc->PID, nomesIOS[tipoIO]);
+
+			sprintf(logs->textos[logs->fim], "\nProcesso de PID %d solicitou IO do tipo %s e foi para a fila correspondente\n", proc->PID, nomesIOS[tipoIO]);
+			logs->chegada[logs->fim++] = t;
+			logs->fim %= MAXLOGS;
+
+			hist[proc->PID].tiposIO[hist[proc->PID].nIOs++] = tipoIO;
+			
 			inserir(proc, ios[tipoIO]); /* Tipo de IO aleatório */
 			return;
 		}
